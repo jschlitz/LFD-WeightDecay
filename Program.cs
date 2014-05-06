@@ -20,17 +20,31 @@ namespace LFD_WeightDecay
         return;
       }
 
-      var original = GetFromFile(args[0]);
-      var transformed = original.Select(a => new Tuple<double[], double>(Phi(a), a[2])).ToList();
-      var xM = DenseMatrix.Create(transformed.Count, transformed[0].Item1.Length, (r, c) => transformed[r].Item1[c]);
-      var yV = DenseVector.OfEnumerable(transformed.Select(t => t.Item2));
-      var answer = PseudoInverse(xM) * yV;
+      DenseMatrix xM;
+      DenseVector yV;
+      GetLinRegArgs(args[0], out xM, out yV);
+      var weights = PseudoInverse(xM) * yV;
+      var eIn = Error(weights, xM, yV);
+
       
-      Console.WriteLine(answer);
+      Console.WriteLine(weights);
 
 
 
       Console.ReadKey(true);
+    }
+
+    private static object Error(DenseVector weights, DenseMatrix xM, DenseVector yV)
+    {
+      throw new NotImplementedException();
+    }
+
+    private static void GetLinRegArgs(string fileName, out DenseMatrix xM, out DenseVector yV)
+    {
+      var original = GetFromFile(fileName);
+      var transformed = original.Select(a => new Tuple<double[], double>(Phi(a), a[2])).ToList();
+      xM = DenseMatrix.Create(transformed.Count, transformed[0].Item1.Length, (r, c) => transformed[r].Item1[c]);
+      yV = DenseVector.OfEnumerable(transformed.Select(t => t.Item2));
     }
 
     public static DenseMatrix PseudoInverse(DenseMatrix m)
