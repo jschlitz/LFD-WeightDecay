@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace LFD_WeightDecay
 {
@@ -20,15 +21,25 @@ namespace LFD_WeightDecay
       }
 
       var original = GetFromFile(args[0]);
-      var transformed = original.Select(a => new Tuple<double[], double>(Phi(a), a[2]));
+      var transformed = original.Select(a => new Tuple<double[], double>(Phi(a), a[2])).ToList();
+      var xM = DenseMatrix.Create(transformed.Count, transformed[0].Item1.Length, (r, c) => transformed[r].Item1[c]);
+      var yV = DenseVector.OfEnumerable(transformed.Select(t => t.Item2));
+      var answer = PseudoInverse(xM) * yV;
+      
+      Console.WriteLine(answer);
 
-      foreach (var item in original)
-      {
-        Console.WriteLine("{0}, {1}, {2}", item[0], item[1], item[2]);
-      }
+
 
       Console.ReadKey(true);
     }
+
+    public static DenseMatrix PseudoInverse(DenseMatrix m)
+    {
+      var mt = m.Transpose();
+      var what = (mt * m);
+      return (DenseMatrix)(what.Inverse() * mt);
+    }
+
 
     private static double[] Phi(double[] a)
     {
