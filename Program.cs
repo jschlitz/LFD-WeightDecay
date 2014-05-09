@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
@@ -23,20 +24,44 @@ namespace LFD_WeightDecay
       DenseMatrix xM;
       DenseVector yV;
       GetLinRegArgs(args[0], out xM, out yV);
-      var weights = PseudoInverse(xM) * yV;
-      var eIn = Error(weights, xM, yV);
+      //      var weights = PseudoInverse(xM) * yV;
+      for (int k = -3; k <= 3; k++)
+      {
+        Console.WriteLine(" ---------- {0} ----------", k);
+        var weights = GetRegularizedWeights(xM, Math.Pow(10, k), yV);
+        var eIn = Error(weights, xM, yV);
 
-      
-      Console.WriteLine(weights);
+        Console.WriteLine(weights);
+        Console.WriteLine("Ein == {0}", eIn);
+        DenseMatrix xMout;
+        DenseVector yVout;
+
+        GetLinRegArgs(args[1], out xMout, out yVout);
+        var eOut = Error(weights, xMout, yVout);
+        Console.WriteLine("Eout == {0}", eOut);
+
+      }
+
+
 
 
 
       Console.ReadKey(true);
     }
 
-    private static object Error(DenseVector weights, DenseMatrix xM, DenseVector yV)
+    private static double Error(DenseVector weights, DenseMatrix xM, DenseVector yV)
     {
-      throw new NotImplementedException();
+      Debug.Assert(xM.RowCount == yV.Count);
+      Debug.Assert(xM.ColumnCount == weights.Count);
+
+      double wrong = 0.0;
+      for (int i = 0; i < xM.RowCount; i++)
+      {
+        var p = xM.Row(i) * weights;
+        if ((p < 0 ? -1 : 1) != yV[i])
+          wrong += 1;
+      }
+      return wrong / xM.RowCount;
     }
 
     private static void GetLinRegArgs(string fileName, out DenseMatrix xM, out DenseVector yV)
@@ -52,6 +77,15 @@ namespace LFD_WeightDecay
       var mt = m.Transpose();
       var what = (mt * m);
       return (DenseMatrix)(what.Inverse() * mt);
+    }
+
+    public static DenseVector GetRegularizedWeights(DenseMatrix m, double lambda, DenseVector yV)
+    {
+      var mt = m.Transpose();
+      var what = (mt * m);
+      var identity = DenseMatrix.Identity(what.ColumnCount);
+      return (DenseVector)((what + lambda * identity).Inverse() * mt * yV);
+      //return (DenseMatrix)(what.Inverse() * mt);
     }
 
 
