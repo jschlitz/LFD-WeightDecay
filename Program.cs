@@ -23,8 +23,50 @@ namespace LFD_WeightDecay
 
       DenseMatrix xM;
       DenseVector yV;
-      GetLinRegArgs(args[0], out xM, out yV);
-      //      var weights = PseudoInverse(xM) * yV;
+      var fromFile = GetFromFile(args[0]);
+      GetLinRegArgs(fromFile.Take(25), out xM, out yV);
+
+      DenseMatrix xMval;
+      DenseVector yVval;
+      GetLinRegArgs(fromFile.Skip(25), out xMval, out yVval);
+
+      DenseMatrix xMout;
+      DenseVector yVout;
+      GetLinRegArgs(GetFromFile(args[1]), out xMout, out yVout);
+
+      for (int i = 3; i <= 8; i++)
+			{
+        
+        var xMi = DenseMatrix.OfColumnVectors(
+          xM.ColumnEnumerator().Select(t=>t.Item2).Take(i).ToArray());
+
+        var weights = PseudoInverse(xMi) * yV;
+        Console.WriteLine(weights);
+
+
+        var xMvalI = DenseMatrix.OfColumnVectors(
+          xMval.ColumnEnumerator().Select(t => t.Item2).Take(i).ToArray());
+        var eVal = Error(weights, xMvalI, yVval);
+        Console.WriteLine("Eval == {0}", eVal);
+
+        var xMoutI = DenseMatrix.OfColumnVectors(
+          xMout.ColumnEnumerator().Select(t => t.Item2).Take(i).ToArray());
+        var eOut = Error(weights, xMoutI, yVout);
+        Console.WriteLine("Eout == {0}", eOut);
+
+
+			}
+      //DoWeightDecay(args[1], xM, yV);
+
+
+
+
+
+      Console.ReadKey(true);
+    }
+
+    private static void DoWeightDecay(string fileName, DenseMatrix xM, DenseVector yV)
+    {
       for (int k = -3; k <= 3; k++)
       {
         Console.WriteLine(" ---------- {0} ----------", k);
@@ -36,17 +78,12 @@ namespace LFD_WeightDecay
         DenseMatrix xMout;
         DenseVector yVout;
 
-        GetLinRegArgs(args[1], out xMout, out yVout);
+
+        GetLinRegArgs(GetFromFile(fileName), out xMout, out yVout);
         var eOut = Error(weights, xMout, yVout);
         Console.WriteLine("Eout == {0}", eOut);
 
       }
-
-
-
-
-
-      Console.ReadKey(true);
     }
 
     private static double Error(DenseVector weights, DenseMatrix xM, DenseVector yV)
@@ -64,9 +101,9 @@ namespace LFD_WeightDecay
       return wrong / xM.RowCount;
     }
 
-    private static void GetLinRegArgs(string fileName, out DenseMatrix xM, out DenseVector yV)
+    private static void GetLinRegArgs(IEnumerable<double[]> items, out DenseMatrix xM, out DenseVector yV)
     {
-      var original = GetFromFile(fileName);
+      var original = items;
       var transformed = original.Select(a => new Tuple<double[], double>(Phi(a), a[2])).ToList();
       xM = DenseMatrix.Create(transformed.Count, transformed[0].Item1.Length, (r, c) => transformed[r].Item1[c]);
       yV = DenseVector.OfEnumerable(transformed.Select(t => t.Item2));
